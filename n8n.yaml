@@ -1,0 +1,41 @@
+version: "3.8"
+services:
+  n8n:
+    image: n8nio/n8n:stable
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE:-${TZ}}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - N8N_SECURE_COOKIE=true
+      - N8N_HOST=${PUBLIC_HOST}
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://${PUBLIC_HOST}/
+      - N8N_PORT=5678
+      - DB_TYPE=sqlite
+      - DB_SQLITE_DATABASE=/home/node/.n8n/database.sqlite
+      - DB_SQLITE_VACUUM_ON_STARTUP=true
+      - EXECUTIONS_PROCESS=own
+      # Plain env secrets (per your request)
+      - NEXTDNS_API_KEY=${NEXTDNS_API_KEY}
+      - NEXTDNS_PROFILE_ID=${NEXTDNS_PROFILE_ID}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
+    volumes:
+      - /opt/n8n/data:/home/node/.n8n
+      - /opt/n8n/files:/files
+    ports:
+      - "5678:5678" # publish n8n UI/API port to the host (local access)
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    # Cloudflared forwards the public hostname to the n8n container
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TOKEN} --url http://n8n:5678
+    environment:
+      - TUNNEL_TRANSPORT_PROTOCOL=auto
+    depends_on:
+      - n8n
+
+# No custom networks, no Docker secrets — uses default network and plain env vars per your request
+# Host bind mounts used for persistence: /opt/n8n/data and /opt/n8n/files

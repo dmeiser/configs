@@ -1,0 +1,22 @@
+[Unit]
+Description=Hindsight Memory Service
+After=network.target
+
+[Service]
+Type=simple
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%U/bus"
+Environment="XDG_SESSION_TYPE=tty"
+Environment="XDG_SESSION_CLASS=user"
+Environment="XDG_RUNTIME_DIR=/run/user/%U"
+
+ExecStartPre=/usr/bin/podman rm -f hindsight
+ExecStart=/usr/bin/podman run --network host --name hindsight -p 8888:8888 -p 9999:9999 --env-file /home/username/hindsight/env ghcr.io/vectorize-io/hindsight:latest
+ExecStop=/usr/bin/podman stop hindsight
+ExecStopPost=/usr/bin/podman rm -f hindsight
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

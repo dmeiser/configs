@@ -38,6 +38,7 @@ This deployment runs Hindsight via Podman on the host network, connected to a lo
 ## File Structure
 
 - [`env`](./env): Environment variables file containing credentials, model endpoints, and database connection strings. All sensitive tokens are masked with `****` and username is replaced with `username`.
+- [`mental_models.md`](./mental_models.md): Prompt templates for Hindsight mental models (`SOUL.md` and `USER.md`).
 - [`systemd/hindsight.service`](./systemd/hindsight.service): Systemd user service managing the Hindsight container lifecycle via Podman.
 - [`systemd/llama-embedding.service`](./systemd/llama-embedding.service): Systemd user service running local `llama.cpp` embedding server.
 - [`systemd/llama-reranking.service`](./systemd/llama-reranking.service): Systemd user service running local `llama.cpp` reranking server.

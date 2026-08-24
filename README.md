@@ -1,2 +1,2 @@
-# n8n-config
-My n8n configuration
+# Configurations 
+Configurations for various projects and software that I use.

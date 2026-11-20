@@ -75,3 +75,21 @@ This deployment runs Hindsight via Podman on the host network, connected to a lo
 - **Host / Port**: `0.0.0.0:8080` (`http://127.0.0.1:8080/v1/rerank`)
 - **Compute Acceleration**: CUDA device 0 (`--device CUDA0`), offloading all layers (`-ngl 99999`).
 - **Context & Batch Size**: Context 16384, Batch Size 1024.
+
+---
+
+## Scheduling
+
+`reflection/reflect_soul_user.py` runs from the host user crontab rather than a systemd timer — it needs only stdlib Python and direct HTTP to the Hindsight API.
+
+```cron
+0 0 * * * /usr/bin/python3 /home/username/scripts/reflect_soul_user.py --server http://<hindsight-host>:8888 --bank-id clawy --budget mid --user-budget low --agent-identity clawy --user-identities "User, username" --soul /home/username/.hermes/SOUL.md --user /home/username/.hermes/memories/USER.md --llm-base-url http://<llm-host>:8080 --llm-model qwen3.8-27b-low --timeout 1800 >> /home/username/logs/reflect_soul_user.log 2>&1
+```
+
+Operational notes:
+
+- **`--llm-model` must name a model the `--llm-base-url` actually serves.** A llama.cpp router exposes GGUF aliases (`qwen3.8-27b-low`); the friendly name `qwen3.8-27b` may exist only on a litellm proxy in front of it. A mismatch returns `400 model '...' not found` **after** stages 1–2 have already cached, so the log looks healthy while `SOUL.md` never updates. Verify with `GET <base-url>/v1/models` before changing anything else.
+- **Keep the `>> ~/logs/reflect_soul_user.log 2>&1` redirect.** Without it cron discards all output — stderr tracebacks included — and the failure is invisible.
+- **Liveness is the `SOUL.md` / `USER.md` mtime**, not the log. The pipeline can run for 20+ minutes and write nothing.
+- **Retries are in the script**, not the cron: `429/500/502/503` retry up to 4 attempts with 60/120/300s backoff. A `504` from `/reflect` is deliberately *not* retried — it means the server-side budget was exhausted, and repeating the same query burns the same wall-clock again with the same result.
+- **Resume after a failure** with `--start-at soul3` (or `user2`) to reuse the cached stage outputs instead of re-running the expensive reflect stages.
